@@ -3,7 +3,7 @@ from ember.features import PEFeatureExtractor
 import pandas as pd
 
 
-def create_dataset(pe_dir, save=True, output_file='dataset_encoded.pickle'):
+def create_dataset(pe_dir, save=True, output_file='pickle/dataset_lief.pickle'):
 
     ds = pd.read_csv(pe_dir + 'samples.csv')
     ds = ds.to_dict('records')

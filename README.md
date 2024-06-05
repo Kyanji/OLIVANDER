@@ -32,8 +32,8 @@ Packages needed are:
 The repository contains the following scripts and folders:
 * main.py:  script to execute OLIVANDER
 * /results: results folder
-* /pickle: folder used to save the results of the method. Specifically, a folder with a name containing the specific parameters used will be created.
-* /libs: script used by the method
+* /pickle: folder used to save the results of the method. Specifically, a folder with a name containing the specific parameters used will be created. **The actual evasive PE files will be referred to as "final-"**
+* /libs: script used by the method. 
 * /models: it contain the DNN used as oracle
 * config.ini: file containing the paths used by the method
 # Parameters

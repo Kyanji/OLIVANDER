@@ -68,7 +68,7 @@ def generate_counterfactual(x_train, x_val, x_test, y_train, y_val, y_test,
     for i in res.keys():
         found, not_found, differences, differences_index, output, test = cft_to_info(res[i][0])
         res_parsed[i] = [found, not_found, differences, differences_index, output, test, res[i][1]]
-    with open("conterfactuals.pickle", 'wb') as h:
+    with open("pickle/counterfactuals.pickle", 'wb') as h:
         pickle.dump(res_parsed, h)
 
     return res_parsed
