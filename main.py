@@ -1,4 +1,5 @@
 import argparse
+import configparser
 import datetime
 import os
 import threading
@@ -12,56 +13,60 @@ from libs.build_dnn import build_dnn
 from libs.create_dataset import create_dataset
 from libs.dataset_to_features import dataset_to_features
 from libs.find_id import find_id
-from libs.generate_conterfactual import generate_conterfactual
+from libs.generate_counterfactual import generate_counterfactual
 
 num_thread = 1
 OPTIMIZED = False
+config = configparser.ConfigParser()
+config.read('config.ini')
 
 parser = argparse.ArgumentParser(
     prog='OLIVANDER')
 
-parser.add_argument("--mode", choices=['load_dataset', 'load_conterfactual', "generate_dataset"], required=True)
-parser.add_argument('--pe_folder', default="/media/kyanji/data/dataset/pe-machine-learning-dataset/")
-parser.add_argument('--conterfactual_path', default="conterfactuals.pickle")
-parser.add_argument('--step', default=1000)
+parser.add_argument("--mode", choices=['load_dataset', 'load_counterfactual', "generate_dataset"], required=True)
+parser.add_argument('--eta', default=1000)
 parser.add_argument('--section', default=1)
 parser.add_argument('--iterative', default=0)
+parser.add_argument('--offsetmin', default=100)
+parser.add_argument('--offsetmax', default=200)
 parser.add_argument('--iterative_on')
 parser.add_argument('--c', default=100)
 args = parser.parse_args()
 
-pe_folder = args.pe_folder  # "/media/kyanji/data/dataset/pe-machine-learning-dataset/"
-conterfactual_path = args.conterfactual_path  # "conterfactuals.pickle"
+pe_folder = config.get("SETTINGS", "pe_folder")
+counterfactual_path = config.get("SETTINGS", "counterfactual_path")
 
 conf = args.mode
 model = build_dnn()
 model.load_weights("models/DNN_w.h5")
 
-# CREATE DATASET FROM PE
-if conf != "load_conterfactual":
+if conf != "load_counterfactual":
+    # CREATE DATASET FROM PE
     if conf == "generate_dataset":
         ds = create_dataset(pe_folder)
         x_train, x_val, x_test, y_train, y_val, y_test, x_train_meta, x_val_meta, x_test_meta = dataset_to_features(ds)
         del ds
     elif conf == "load_dataset":
-        with open("pickle/dataset_lief.pickle", 'rb') as handle:
+        # LOAD EXTRACTED LIEF DATASET
+        with open(config.get("SETTINGS", "lief_dataset"), 'rb') as handle:
             ds = pickle.load(handle)
         x_train, x_val, x_test, y_train, y_val, y_test, x_train_meta, x_val_meta, x_test_meta = dataset_to_features(ds)
         del ds
-
-    data = generate_conterfactual(x_train, x_val, x_test, y_train, y_val, y_test, model)
+    # GENERATE COUNTERFACTUALS
+    data = generate_counterfactual(x_train, x_val, x_test, y_train, y_val, y_test, model, offset_min=int(args.offsetmin),offset_max=int(args.offsetmax))
 else:
-    with open(conterfactual_path, "rb") as h:
+    # LOAD ALREADY GENERATED CONTERFACTUALS
+    with open(counterfactual_path, "rb") as h:
         data = pickle.load(h)
 
-    with open("pickle/dataset_lief.pickle", 'rb') as handle:
+    with open(config.get("SETTINGS", "lief_dataset"), 'rb') as handle:
         ds = pickle.load(handle)
     x_train, x_val, x_test, y_train, y_val, y_test, x_train_meta, x_val_meta, x_test_meta = dataset_to_features(ds)
     del ds
 
 mode = "OneShot"
 
-STEPS = int(args.step)
+STEPS = int(args.eta)
 SECTIONS = int(args.section)
 if args.iterative == "1":
     if args.iterative_on == "section":
@@ -71,12 +76,14 @@ if args.iterative == "1":
     else:
         mode = "IterAll"
 
+# FIND ALREADY GENERATED ADVERSARIAL EXAMPLES TO NOT REPEAT THE COMPUTATION
 todo = list(data.keys())[:]
 dir_output = "results/" + str(mode) + "_step" + str(STEPS) + "_sec" + str(SECTIONS) + "c" + str(args.c) + "/"
 try:
     os.mkdir(dir_output)
 except:
     pass
+# ONESHOT IS THE DEFAULT, OTHER CONFIGURATIONS ALLOW TO USE AN LOGICAL "OR" FOR STEPS AND SECTION PARAMETERS
 if mode == "OneShot":
     for d in os.listdir(dir_output):
         if ".json" in d:
@@ -98,7 +105,9 @@ while True:
                 mi_n = todo[0]
                 del todo[0]
                 print("[+] STARTING\t" + str(mi_n))
+                # LOADS INDEXES CONTAINING DIFFERENCES BETWEEN ORIGINAL AND GENERATED CONTERFACTUAL, THE CONTERFACTUAL EXAMPLE, THE ORIGINAL LIEF EXAMPLE AND THE TIME SPENT ON GENERATION
                 found, not_found, differences, differences_index, target, test, times = data[mi_n]
+                # FIND THE FILENAME OF THE ORIGINAL PE FILE
                 index_file1 = find_id(test[0][0], x_test_meta)
                 if ("temp-" + str(mi_n) + "-adv.exe") in dir_output:
                     resume = True

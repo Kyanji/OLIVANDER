@@ -6,11 +6,11 @@ from sklearn import metrics
 import dice_ml
 
 from libs.cft_to_info import cft_to_info
-from libs.find_id import find_id
 
 
-def generate_conterfactual(x_train, x_val, x_test, y_train, y_val, y_test,
-                           model, conterfactual_number=1,offset_min=100,offset_max=105):
+def generate_counterfactual(x_train, x_val, x_test, y_train, y_val, y_test,
+                            model, conterfactual_number=1, offset_min=100, offset_max=200):
+    print("[+] Generating Counterfactuals..")
     index_to_map = [str(n) for n in range(x_train.shape[1])]
     df = pd.DataFrame(x_train, columns=index_to_map)
     df_test = pd.DataFrame(x_test, columns=index_to_map)
@@ -68,7 +68,7 @@ def generate_conterfactual(x_train, x_val, x_test, y_train, y_val, y_test,
     for i in res.keys():
         found, not_found, differences, differences_index, output, test = cft_to_info(res[i][0])
         res_parsed[i] = [found, not_found, differences, differences_index, output, test, res[i][1]]
-    with open("conterfactual.pickle",'wb') as h:
-        pickle.dump(res_parsed,h)
+    with open("conterfactuals.pickle", 'wb') as h:
+        pickle.dump(res_parsed, h)
 
     return res_parsed

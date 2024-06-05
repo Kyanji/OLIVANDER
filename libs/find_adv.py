@@ -11,10 +11,13 @@ from libs.build_section import build_section
 def find_adv(differences_index, target, index_file, model, id_file, STEP_MATCH, folder, section_n, dir_pe, resume=False,
              OPTIMIZED=False, c=100):
     id_file = str(id_file)
+    # MAXIMUM NUMBER OF ITERATIONS
     step_thresh = 1000 * STEP_MATCH
     first_step = True
+    # THRESHOLD FOR THE DISTANCE BETWEEN THE ADVERSARIAL SAMPLE AND THE COUNTERFACTUAL
     threshold = 0.0001
     step = c
+    # MAXIMUM NUMBER OF DIVERGENT ITERATIONS REGARDING THE DISTANCE
     tollerance_thresh = 5
     size_complexity = 0
 
@@ -33,6 +36,7 @@ def find_adv(differences_index, target, index_file, model, id_file, STEP_MATCH, 
         target_score = model.predict(np.array(target_n)[0:-1].reshape(1, -1))
 
         if resume:
+            # LOAD PARTIALLY GENERATED ADVERSARIAL SAMPLE
             file_data_c = open(folder + "temp-" + str(id_file) + "-adv.exe", "rb").read()
             lief_binary_c = lief.PE.parse(list(file_data_c))
             content = lief_binary_c.get_section("test0").content
@@ -55,7 +59,7 @@ def find_adv(differences_index, target, index_file, model, id_file, STEP_MATCH, 
         tollerance = -1
 
         dist = distance.euclidean(normalized, target_n[0:256])
-        index_range = differences_index[0][mz][0][0:-1]
+        index_range = differences_index[mz][0][0:-1]
         counter = 0
         result = [[0]]
         start = datetime.datetime.now()
@@ -78,7 +82,7 @@ def find_adv(differences_index, target, index_file, model, id_file, STEP_MATCH, 
                 counter = 0
             if (not OPTIMIZED and counter == STEP_MATCH) or (counter == 0 and np.argmax(result[0]) == 0):
                 counter = 0
-                # print("ADVERSARIAL TRY")
+                # GENERATE THE PAYLOAD
                 adv = lief.PE.parse(list(file_data))
                 to_add_s = build_section(to_add)
                 to_add_t = np.array_split(np.array(to_add_s), section_n)
@@ -98,12 +102,13 @@ def find_adv(differences_index, target, index_file, model, id_file, STEP_MATCH, 
 
                 file_data_temp = open(folder + "temp-" + id_file + "-adv.exe", "rb").read()
                 pe_extracted_adv = np.array(extractor.feature_vector(file_data_temp), dtype=np.float64)
+                # INTERACTION WITH THE ORACLE FOR VERIFICATION
                 final = model.predict(pe_extracted_adv.reshape(1, -1))
                 print("{" + str(counter_total) + "/" + str(step_thresh) + "}" + str(
                     index_range) + "\tDISTANCE FOR " + str(id_file) + ": ", dist, "\t", tollerance, first_step,
                       "\t" + str(int(target_score[0][0] * 100)) + "\t<- " + str(int(final[0][0] * 100)))
                 if np.argmax(final[0]) == 0:
-                    print("GOOL")
+                    print("MODEL EVADED")
                     # lief_binary = lief.PE.parse(list(file_data))
                     adv.write(folder + "final-" + str(id_file) + "-step-" + str(STEP_MATCH) + "-section-" + str(
                         section_n) + "-adv.exe")
@@ -131,15 +136,14 @@ def find_adv(differences_index, target, index_file, model, id_file, STEP_MATCH, 
                 print(str(index_range) + "\tDISTANCE FOR " + str(id_file) + ": ", dist, "\t", tollerance, first_step,
                       "\t" + str(int(target_score[0][0] * 100)) + "\t<- " + str(int(result[0][0] * 100)))
 
-            #   else:
-            #      print(str(index_range) + "\tDISTANCE FOR " + str(mi) + ": ", dist, "\t", tollerance, first_step,
-            # l              "\t" + str(int(target_score[0][0] * 100)) + "\t<- " + str(int(final[0][0] * 100)))
             counts_bin = counts_bin_orig + to_add
 
             sum = counts_bin.sum()
             normalized = counts_bin / sum
             if not first_step:
                 index_range = range(256)
+
+            # ADD OR REMOVE CONTENT FROM THE PAYLOAD
             for index in index_range:
                 # print(index, "original " + str(counts_bin[index]), "\t\tnorm " + str(normalized[index]), "-->\t", target[index])
                 if target_n[index] > normalized[index]:
@@ -147,7 +151,7 @@ def find_adv(differences_index, target, index_file, model, id_file, STEP_MATCH, 
                 else:
                     to_add[index] = to_add[index] - step
 
-        print("ok")
+        print("[-] generation ended")
 
     res = {"counter_total": counter_total, "dist_flag": dist > threshold,
            "tollerance_flag": tollerance < tollerance_thresh,
