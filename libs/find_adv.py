@@ -8,8 +8,12 @@ from scipy.spatial import distance
 from libs.build_section import build_section
 
 
+def get_num(x):
+    return np.bincount(np.frombuffer(x, dtype=np.uint8), minlength=256)
+
+
 def find_adv(differences_index, target, index_file, model, id_file, STEP_MATCH, folder, section_n, dir_pe, resume=False,
-             OPTIMIZED=False, c=100):
+             OPTIMIZED=False, c=100, injection_type="section"):
     id_file = str(id_file)
     # MAXIMUM NUMBER OF ITERATIONS
     step_thresh = 1000 * STEP_MATCH
@@ -38,15 +42,20 @@ def find_adv(differences_index, target, index_file, model, id_file, STEP_MATCH, 
         if resume:
             # LOAD PARTIALLY GENERATED ADVERSARIAL SAMPLE
             file_data_c = open(folder + "temp-" + str(id_file) + "-adv.exe", "rb").read()
-            lief_binary_c = lief.PE.parse(list(file_data_c))
-            content = lief_binary_c.get_section("test0").content
-            c = np.unique(np.array(content), return_counts=True)
+
+            if injection_type == "section":
+                lief_binary_c = lief.PE.parse(list(file_data_c))
+                content = lief_binary_c.get_section("test0").content
+                c = np.unique(np.array(content), return_counts=True)
+            else:
+                int_values = [x for x in file_data_c[len(file_data):]]
+                c = np.unique(np.array(int_values), return_counts=True)
+                print("")
 
         to_add = np.zeros(256)
         if resume:
             for c1, e in enumerate(c[0]):
                 to_add[c[0][c1]] = c[1][c1]
-        ###
 
         bin_data = file_data
         counts_bin_orig = np.bincount(np.frombuffer(bin_data, dtype=np.uint8), minlength=256)
@@ -85,20 +94,29 @@ def find_adv(differences_index, target, index_file, model, id_file, STEP_MATCH, 
                 # GENERATE THE PAYLOAD
                 adv = lief.PE.parse(list(file_data))
                 to_add_s = build_section(to_add)
-                to_add_t = np.array_split(np.array(to_add_s), section_n)
-                to_add_s = np.array(list(to_add_t))
-                if to_add_s.shape[0] != section_n:
-                    print("ERROR")
-                for section_i in range(section_n):
-                    section = lief.PE.Section("test" + str(section_i))
-                    section.content = to_add_s[section_i]
-                    section.size = len(section.content)
-                    adv.add_section(section)
-                    size_complexity = size_complexity + len(section.content)
 
-                # print(str(section.size)+" "+str(adv.get_section("test0").size))  # section's size
+                if injection_type == "section":
+                    to_add_t = np.array_split(np.array(to_add_s), section_n)
+                    to_add_s = np.array(list(to_add_t))
+                    if to_add_s.shape[0] != section_n:
+                        print("ERROR")
+                else:
+                    to_add_s = bytes(to_add_s)
+                    size_complexity = size_complexity + len(to_add_s)
 
-                adv.write(folder + "temp-" + id_file + "-adv.exe")
+                if injection_type == "section":
+                    for section_i in range(section_n):
+                        section = lief.PE.Section("test" + str(section_i))
+                        section.content = to_add_s[section_i]
+                        section.size = len(section.content)
+                        adv.add_section(section)
+                        size_complexity = size_complexity + len(section.content)
+                    adv.write(folder + "temp-" + id_file + "-adv.exe")
+                else:
+                    file_data = open(dir_pe + "samples/" + str(index_file), "rb").read()
+                    with open(folder + "temp-" + id_file + "-adv.exe", "wb") as h:
+                        h.write(file_data)
+                        h.write(to_add_s)
 
                 file_data_temp = open(folder + "temp-" + id_file + "-adv.exe", "rb").read()
                 pe_extracted_adv = np.array(extractor.feature_vector(file_data_temp), dtype=np.float64)
@@ -156,6 +174,7 @@ def find_adv(differences_index, target, index_file, model, id_file, STEP_MATCH, 
     res = {"counter_total": counter_total, "dist_flag": dist > threshold,
            "tollerance_flag": tollerance < tollerance_thresh,
            "time": (datetime.datetime.now() - start).seconds, "res": None, "size_complexity": size_complexity}
+
 
     import json
     with open(folder + str(id_file) + "-step-" + str(STEP_MATCH) + "-section-" + str(section_n) + "-adv.json", 'w',

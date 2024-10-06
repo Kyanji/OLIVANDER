@@ -25,11 +25,12 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument("--mode", choices=['load_dataset', 'load_counterfactual', "generate_dataset"], required=True)
 parser.add_argument('--eta', default=1000)
+parser.add_argument('--injection_type', choices=['section', 'padding'], default="section")
 parser.add_argument('--section', default=1)
 parser.add_argument('--iterative', default=0)
 parser.add_argument('--offsetmin', default=100)
 parser.add_argument('--offsetmax', default=200)
-parser.add_argument('--iterative_on')
+parser.add_argument('--iterative_on',choices=["section","step","both"])
 parser.add_argument('--c', default=100)
 args = parser.parse_args()
 
@@ -53,7 +54,8 @@ if conf != "load_counterfactual":
         x_train, x_val, x_test, y_train, y_val, y_test, x_train_meta, x_val_meta, x_test_meta = dataset_to_features(ds)
         del ds
     # GENERATE COUNTERFACTUALS
-    data = generate_counterfactual(x_train, x_val, x_test, y_train, y_val, y_test, model, offset_min=int(args.offsetmin),offset_max=int(args.offsetmax))
+    data = generate_counterfactual(x_train, x_val, x_test, y_train, y_val, y_test, model,
+                                   offset_min=int(args.offsetmin), offset_max=int(args.offsetmax))
 else:
     # LOAD ALREADY GENERATED CONTERFACTUALS
     with open(counterfactual_path, "rb") as h:
@@ -78,7 +80,7 @@ if args.iterative == "1":
 
 # FIND ALREADY GENERATED ADVERSARIAL EXAMPLES TO NOT REPEAT THE COMPUTATION
 todo = list(data.keys())[:]
-dir_output = "results/" + str(mode) + "_step" + str(STEPS) + "_sec" + str(SECTIONS) + "c" + str(args.c) + "/"
+dir_output = "results/" + str(mode) + "_step" + str(STEPS) + "_sec" + str(SECTIONS) + "c" + str(args.c) + "_"+str(args.injection_type)+"/"
 try:
     os.mkdir(dir_output)
 except:
@@ -105,7 +107,8 @@ while True:
                 mi_n = todo[0]
                 del todo[0]
                 print("[+] STARTING\t" + str(mi_n))
-                # LOADS INDEXES CONTAINING DIFFERENCES BETWEEN ORIGINAL AND GENERATED CONTERFACTUAL, THE CONTERFACTUAL EXAMPLE, THE ORIGINAL LIEF EXAMPLE AND THE TIME SPENT ON GENERATION
+                # LOADS INDEXES CONTAINING DIFFERENCES BETWEEN ORIGINAL AND GENERATED CONTERFACTUAL,
+                # THE CONTERFACTUAL EXAMPLE, THE ORIGINAL LIEF EXAMPLE AND THE TIME SPENT ON GENERATION
                 found, not_found, differences, differences_index, target, test, times = data[mi_n]
                 # FIND THE FILENAME OF THE ORIGINAL PE FILE
                 index_file1 = find_id(test[0][0], x_test_meta)
@@ -117,7 +120,7 @@ while True:
                 p1 = threading.Thread(target=adv_step_mode, args=(mode,
                                                                   differences_index, target, index_file1, model, mi_n,
                                                                   STEPS, dir_output, SECTIONS,
-                                                                  pe_folder, False, OPTIMIZED, int(args.c)))
+                                                                  pe_folder, False, OPTIMIZED, int(args.c),args.injection_type))
 
                 threads.append(p1)
                 p1.start()
