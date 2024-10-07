@@ -61,7 +61,7 @@ def adv_scores(model, x_train, x_val, x_test, y_train, y_val, y_test, x_train_me
 
     new_xtrain, new_xval, new_ytrain, new_yval = train_test_split(new_xtrain, new_ytrain, test_size=0.1,
                                                                   random_state=0, stratify=new_ytrain)
-    hist = model.fit(new_xtrain, new_ytrain, validation_data=(new_xval, new_yval), epochs=2, batch_size=256,
+    hist = model.fit(new_xtrain, new_ytrain, validation_data=(new_xval, new_yval), epochs=2000, batch_size=256,
                      callbacks=[e])
     model.save_weights(output_dir+"model_adv_" + str(eps) + ".tf")
 

@@ -6,7 +6,7 @@ from ember import PEFeatureExtractor
 from scipy.spatial import distance
 
 from libs.build_section import build_section
-
+import shutil
 
 def get_num(x):
     return np.bincount(np.frombuffer(x, dtype=np.uint8), minlength=256)
@@ -128,8 +128,11 @@ def find_adv(differences_index, target, index_file, model, id_file, STEP_MATCH, 
                 if np.argmax(final[0]) == 0:
                     print("MODEL EVADED")
                     # lief_binary = lief.PE.parse(list(file_data))
-                    adv.write(folder + "final-" + str(id_file) + "-step-" + str(STEP_MATCH) + "-section-" + str(
+
+                    shutil.copy(folder + "temp-" + id_file + "-adv.exe",folder + "final-" + str(id_file) + "-step-" + str(STEP_MATCH) + "-section-" + str(
                         section_n) + "-adv.exe")
+                   # adv.write(folder + "final-" + str(id_file) + "-step-" + str(STEP_MATCH) + "-section-" + str(
+                  #      section_n) + "-adv.exe")
                     res = {"counter_total": counter_total, "dist_flag": dist > threshold,
                            "tollerance_flag": tollerance < tollerance_thresh,
                            "time": (datetime.datetime.now() - start).seconds, "res": final[0][0],

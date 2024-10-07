@@ -1,4 +1,5 @@
 import argparse
+import ast
 import configparser
 
 import numpy as np
@@ -21,7 +22,9 @@ counterfactual_path = config.get("SETTINGS", "counterfactual_path")
 
 model = build_dnn()
 model.load_weights("models/DNN_w.h5")
-
+eps_array = config.get("ADVERSARIAL_TRAINING", "EPS_ARRAY")
+eps_array=ast.literal_eval(eps_array)
+print("using EPS array:"+str(eps_array))
 to_test = {}
 
 # LOAD EXTRACTED LIEF DATASET
@@ -37,8 +40,8 @@ my_100 = []
 for i in data.keys():
     found, not_found, differences, differences_index, target, test, times = data[i]
     my_100.append(test[0][0][0:-1])
-scores_tot=[]
-for ind in [0.01, 0.001, 0.0001,0.1]:
+scores_tot = []
+for ind in eps_array:
     eps = ind
     model2 = build_dnn()
     model2.load_weights("models/DNN_w.h5")
