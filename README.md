@@ -26,7 +26,7 @@ Packages needed are:
 * pandas==1.1.5
 * ember==0.1.0
 * scipy==1.5.2
-
+* secml-malware==0.2.4.1
 
 ## Structure
 

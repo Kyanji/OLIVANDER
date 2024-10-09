@@ -1,25 +1,33 @@
 import configparser
 import datetime as datetime
 import os
-import pickle
 
+from secml_malware.attack.blackbox.c_wrapper_phi import CEmberWrapperPhi
+from secml_malware.models import CClassifierEmber
+from libs.Gamma_wrapper.custom_c_classifier_ember import CustomClassifierEmber
+import pickle
+from libs.Gamma_wrapper.CustomClassifier import CustomClassifier
 import numpy as np
 from secml.array import CArray
-from secml_malware.models import CClassifierEmber
-
 from libs.build_dnn import build_dnn
 from libs.dataset_to_features import dataset_to_features
 from libs.find_id import find_id
 
 np.int = np.int64
-from secml_malware.attack.blackbox.c_wrapper_phi import CEmberWrapperPhi
 from secml_malware.attack.blackbox.ga.c_base_genetic_engine import CGeneticAlgorithm
 
 from secml_malware.attack.blackbox.c_gamma_sections_evasion import CGammaSectionsEvasionProblem
 from secml_malware.attack.blackbox.c_gamma_evasion import CGammaEvasionProblem
+from secml.ml.classifiers import CClassifier
+
 
 config = configparser.ConfigParser()
 config.read('config.ini')
+CClassifierEmber.__init__=CustomClassifierEmber.__init__
+CClassifierEmber.extract_features=CustomClassifierEmber.extract_features
+CClassifierEmber._forward=CustomClassifierEmber._forward
+
+CClassifier._check_is_fitted=CustomClassifier._check_is_fitted
 
 model = build_dnn()
 model.load_weights("models/DNN_w.h5")
@@ -57,10 +65,10 @@ if config.get("GAMMA", "gamma_manipulation_type") == "padding":
                                   iterations=5000, threshold=0, )
 else:
     attack = CGammaSectionsEvasionProblem(section_population, net, population_size=10, penalty_regularizer=1e-6,
-                                          iterations=1000, threshold=0,seed=0 )
+                                          iterations=1000, threshold=0, seed=0)
 engine = CGeneticAlgorithm(attack)
 
-dir_output="results/gamma_"+str( config.get("GAMMA", "gamma_manipulation_type"))+"/"
+dir_output = "results/gamma_" + str(config.get("GAMMA", "gamma_manipulation_type")) + "/"
 try:
     os.mkdir(dir_output)
 except:
@@ -84,7 +92,7 @@ for mi in data.keys():
     res[results[-1]["id"]]["partial"] = False
     res[results[-1]["id"]]["final"] = False
     label = y[-1]
-    print("Starting example id:"+str(results[-1]["id"]))
+    print("Starting example id:" + str(results[-1]["id"]))
     start = datetime.datetime.now()
     y_pred, adv_score, adv_ds, f_obj = engine.run(x, CArray(label[1]))
     stop = datetime.datetime.now()
@@ -106,7 +114,7 @@ for mi in data.keys():
 
         print(confidence[0, 1].item())
 ending = datetime.datetime.now()
-print("time:"+str((ending-starting).seconds))
+print("time:" + str((ending - starting).seconds))
 with open(dir_output + "res.pickle", 'wb') as h:
     pickle.dump(res, h)
 print("--")
