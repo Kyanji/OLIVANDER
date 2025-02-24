@@ -132,7 +132,7 @@ Change GAMMA injection type using the "gamma_manipulation_type" parameter in the
 python3 GAMMA.py   
 ```
 ## AMG
-To use AMG, please refer to the official [github repository ](https://github.com/matouskozak/AMG).
+To use AMG, please refer to the official [github repository ](https://github.com/matouskozak/AMG). Please install the library LIEF==0.9.0 for consistent results. 
 
 ## ADVERSARIAL TRAINING
 To use adversarial training, change the list of epsilon in the config.ini, editing the parameter "EPS_ARRAY" like the following example:
