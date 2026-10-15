@@ -2,9 +2,23 @@
 
 The repository contains code refered to the work:
 
-_Evading Anti-Malware Measures in Windows PE with Counterfactual Explanations_
+
+[OLIVANDER: a counterfactual-based method to generate adversarial Windows PE malware](https://link.springer.com/article/10.1007/s10618-025-01127-1) 
  
 Please cite our work if you find it useful for your research and work.
+
+```
+@ARTICLE{10680607,
+  author={De Rose, Luca and  Andresini, Giuseppina and Appice, Annalisa and Malerba, Donato},
+  journal={Data Mining and Knowledge Discovery}, 
+  title={OLIVANDER: a counterfactual-based method to generate adversarial Windows PE malware}, 
+  year={2025},
+  volume={39},
+  number={5},
+  pages={46},
+  doi={10.1007/s10618-025-01127-11}}
+
+```
 
 ## Data
 
